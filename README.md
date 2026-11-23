@@ -1,83 +1,85 @@
-# 지구와 달 과학 놀이터 🚀
+# 과학 놀이터
 
-초등학생 눈높이에서 **낮과 밤이 생기는 이유**와 **밀물·썰물이 생기는 이유**를
-3D로 직접 돌려 보며 배우는 웹앱입니다. 빌드 도구 없이 정적 파일만으로 실행되고,
-Three.js는 CDN(ES Module + importmap)에서 불러옵니다.
+초등학생이 3D 화면을 직접 돌려 보면서 과학 원리를 익히는 웹앱입니다.
+휴대폰과 태블릿에서는 홈 화면에 추가해 앱처럼 쓸 수 있고(PWA), 한 번 열어 두면 인터넷 없이도 열립니다.
 
-- 탭 1 · ☀️ **낮과 밤이 생기는 이유** — 빛나는 태양, 자전하는 지구, 밤 반구의 도시 불빛
-- 탭 2 · 🌊 **밀물과 썰물이 생기는 이유** — 공전하는 달과 양쪽으로 부푸는 반투명 바닷물
+| 레슨 | 해 볼 수 있는 것 |
+| --- | --- |
+| 낮과 밤이 생기는 이유 | 자전하는 지구에 꽂힌 서울 핀과 시계로 아침·낮·저녁·밤이 바뀌는 순간을 지켜보기 |
+| 밀물과 썰물이 생기는 이유 | 달을 손으로 끌어 옮기면 바닷물이 따라 부풀고, 인천 바닷가 물높이가 오르내리는 모습 보기 |
 
-## 실행 방법
+레슨마다 탐험 미션 3개와 확인 퀴즈 3문제가 있고, 해낸 만큼 별을 모읍니다.
+천체를 누르면 설명 카드가 뜨고, `설명 듣기`를 누르면 한국어 음성과 자막으로 원리를 읽어 줍니다.
 
-빌드 도구는 필요 없습니다. 다만 Three.js를 ES Module로 불러오기 때문에
-**로컬 서버로 여는 것을 권장**합니다(Chrome은 `file://`에서 ES 모듈을 막습니다).
+## 실행
+
+Node.js 20.19 이상(또는 22.12 이상)이 필요합니다.
 
 ```bash
-cd earth-moon-playground
-python3 -m http.server 8000
-# 브라우저에서 http://localhost:8000 접속
+npm install
+npm run dev      # 개발 서버 (http://localhost:5173)
+npm test         # 단위 테스트 (vitest)
+npm run build    # dist/ 에 배포용 정적 파일 생성
+npm run preview  # 빌드 결과를 로컬에서 확인 (http://localhost:4173)
 ```
 
-Node.js가 있다면 `npx serve .` 같은 정적 서버도 동일하게 동작합니다.
+## 배포 (GitHub Pages)
 
-> `index.html`을 더블클릭해 바로 열면 페이지는 보이지만, 브라우저 보안 정책(CORS) 때문에
-> `main.js` 모듈이 로드되지 않아 3D 화면이 시작되지 않습니다. 그때는 화면에 서버 실행
-> 안내가 표시됩니다.
->
-> Three.js를 CDN에서 받아오므로 인터넷 연결이 필요합니다.
-> GitHub Pages, Netlify, Vercel 같은 정적 호스팅에 폴더째 올리면 그대로 배포됩니다.
+`main` 브랜치에 push 하면 `.github/workflows/deploy.yml`이 테스트와 빌드를 거쳐 GitHub Pages에 올립니다.
+처음 한 번은 저장소 Settings → Pages → Build and deployment → Source 를 **GitHub Actions**로 바꿔야 합니다.
 
-## 파일 구성
+배포 주소는 `https://bbongs-seo.github.io/visual-science-lab/`입니다.
+주소가 바뀌면 `index.html`의 `og:url`, `og:image` 두 줄도 함께 바꿔야 카카오톡 링크 미리보기가 제대로 나옵니다.
 
-| 파일 | 역할 |
-| --- | --- |
-| `index.html` | 화면 구조(헤더, 탭, 3D 무대, 컨트롤, 원리 카드)와 importmap |
-| `style.css` | 색감·레이아웃·반응형 스타일 |
-| `main.js` | Three.js 장면 구성, 절차적 텍스처, 상호작용, 음성 설명 |
-| `README.md` | 이 문서 |
+## 폴더 구조
 
-## 기능
+```
+index.html               앱 껍데기, 링크 미리보기(OG) 태그
+vite.config.js           빌드·PWA(오프라인 캐시, 앱 매니페스트) 설정
+public/
+  textures/              지구 낮·밤, 달 사진 (NASA, 퍼블릭 도메인)
+  icons/, og-image.png   앱 아이콘, 링크 미리보기 이미지
+src/
+  main.js                시작점
+  catalog.js             메뉴 목록 (과목·레슨)
+  app/                   라우터(#/과목/레슨), 화면 전환, 홈, PWA 업데이트 알림
+  shared/
+    scene-lesson.js      3D 레슨 공통 화면: 무대·컨트롤·음성·미션·퀴즈·정리
+    three/               공유 렌더러, 지구·태양·달·별 만들기, 셰이더
+    astro.js             시각·물높이 계산 (순수 함수, 테스트 대상)
+    progress.js          별 기록 (이 기기 localStorage)
+    narration.js, quiz.js, toast.js
+  lessons/science/
+    day-night/           content.js(글·미션·퀴즈) + scene.js(3D 장면)
+    tides/
+  styles/                공통·홈·레슨 스타일
+tests/                   vitest 단위 테스트
+```
 
-**공통**
+## 새 레슨 추가하기
 
-- OrbitControls로 드래그 회전, 휠/핀치 확대·축소 (화면 이동은 잠금)
-- `⏸ 잠깐 멈추기` / `▶ 이어서 보기` 로 움직임을 멈추고 다시 재생
-- 속도 슬라이더(0.2배 ~ 3.0배, 기본 1.0배)
-- 천체(태양·지구·달·바닷물)를 누르면 짧은 설명 카드가 나타납니다
-- `🔊 설명 듣기` — Web Speech API 한국어 음성 + 화면 자막,
-  `⏹ 읽기 멈추기`, `↻ 다시 듣기`
-- 375px 모바일 화면까지 반응형으로 동작
+1. `src/lessons/<과목>/<이름>/` 폴더에 세 파일을 만듭니다.
+   - `content.js`: 배지·힌트·미션·원리 설명·음성 문장·퀴즈 (기존 레슨 형식 참고)
+   - `scene.js`: `createScene({ canvas, overlay, complete, signal })` 이 `{ scene, camera, controls, pickTargets, resize, update }` 를 돌려주도록 작성
+   - `index.js`: `createSceneLesson({ content, createScene })`
+2. `src/catalog.js`의 `LESSONS`에 한 줄을 추가합니다. `stars`는 미션 수 + 퀴즈 수와 같아야 하며 테스트가 확인합니다.
+3. 수학처럼 3D가 아닌 레슨은 `mount(root, { entry })`가 `{ unmount() }`를 돌려주는 모듈이면 무엇이든 됩니다. 새 과목은 `SUBJECTS`에 추가하면 홈에 섹션이 생깁니다.
 
-**탭 1 · 낮과 밤**
-
-- 태양(글로우 포함)과 자전하는 지구
-- 지구 셰이더가 태양 방향을 기준으로 낮/밤을 나누고, 밤 반구에는 도시 불빛을 표시
-- 낮·밤 라벨이 3D 위치를 따라 화면에 투영됨
-
-**탭 2 · 밀물과 썰물**
-
-- 크레이터 질감의 달이 지구 둘레를 공전
-- 달 방향과 반대 방향으로 부푼 반투명 바닷물 타원체(두 개의 밀물 라벨)
-- 달의 인력과 원심력으로 밀물·썰물이 생기는 원리를 카드로 설명
+미션 성공은 장면에서 `complete("미션-id")`를 부르면 됩니다. 천체 `userData.body.id`가 `sun`이면 그 천체를 눌렀을 때 `pick:sun` 미션이 자동으로 성공 처리됩니다.
 
 ## 구현 메모
 
-- 지구의 낮/밤 텍스처와 달 텍스처는 이미지 파일 없이 캔버스(canvas)에 절차적으로 그립니다.
-  (`paintEarthTextures`, `paintMoonTexture`) 덕분에 외부 이미지 의존성이 없습니다.
-- 지구는 커스텀 셰이더(`EARTH_FRAGMENT`)로 낮·밤 텍스처를 태양 방향 기준으로 섞고,
-  경계의 따뜻한 기운과 대기 가장자리 산란을 더합니다.
-- 음성 설명은 문장 단위로 끊어 읽고, `onend`/`onerror`와 안전 타임아웃을 함께 사용해
-  음성이 없는 브라우저에서도 자막이 읽을 수 있는 속도로 넘어갑니다.
-- 두 번째 탭의 무대는 처음 보일 때 크기를 다시 계산해 캔버스가 찌그러지지 않게 합니다.
+- 모든 레슨이 WebGL 렌더러 하나를 돌려 씁니다. 레슨을 떠날 때 장면의 geometry·material, 이벤트, 애니메이션 루프, 음성을 정리합니다.
+- 화면 속 시간은 실제와 다릅니다. 낮과 밤 레슨은 약 20초에 하루가 지나고, 밀물과 썰물 레슨은 달이 실제(약 1/27)보다 빠르게(1/10) 돌며 바닷물 부푼 모양도 크게 과장했습니다. 레슨 설명에도 이 점을 적어 두었습니다.
+- 구름은 이미지 파일 없이 캔버스에서 좌우가 이어지는 노이즈로 그리고, 태양 표면은 셰이더로 끓어오르는 모습을 만듭니다.
 
-## 접근성
+## 개인정보
 
-- 탭은 `role="tab"` / `aria-selected` / `aria-controls`를 사용하고 좌우 방향키로 이동합니다.
-- 자막 영역은 `aria-live="polite"`로 읽어 줍니다.
-- `prefers-reduced-motion` 설정에서는 전환 애니메이션을 최소화합니다.
+이 앱은 이름·연락처·기기 정보를 모으지 않고, 분석 도구나 광고도 넣지 않았습니다.
+모은 별은 그 기기의 브라우저 저장소에만 남습니다.
 
-## 브라우저 지원
+## 이미지 출처
 
-최신 Chrome, Edge, Safari, Firefox에서 동작합니다.
-WebGL과 ES Module(importmap)을 사용하므로 아주 오래된 브라우저에서는 동작하지 않을 수 있습니다.
-음성 설명은 브라우저에 설치된 한국어 음성(TTS)을 사용하며, 음성이 없으면 자막으로 대신합니다.
+- 지구 낮: NASA Visible Earth "Blue Marble" (Wikimedia Commons, 퍼블릭 도메인)
+- 지구 밤: NASA Earth Observatory "Earth at Night" (Wikimedia Commons, 퍼블릭 도메인)
+- 달: NASA Scientific Visualization Studio "CGI Moon Kit" (퍼블릭 도메인)

@@ -6,3 +6,5 @@ Thumbs.db
 
 # 로그·임시 파일
 *.log
+node_modules/
+dist/
