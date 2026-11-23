@@ -813,8 +813,18 @@ body.is-file .stage::after {
   .body-info {
     left: 12px;
     right: 12px;
-    bottom: 66px;
+    top: 54px;
+    bottom: auto;
     width: auto;
+    padding: 12px 14px 13px;
+  }
+
+  .body-info__title {
+    font-size: 13px;
+  }
+
+  .body-info__text {
+    font-size: 12px;
   }
 
   .controls {
