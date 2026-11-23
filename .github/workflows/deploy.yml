@@ -21,7 +21,6 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          # npm 11 이 필요: macOS 에서 만든 lock 파일의 선택 의존성을 npm 10 은 누락으로 보고 npm ci 를 멈춘다
           node-version: 24
           cache: npm
       - run: npm ci
