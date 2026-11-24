@@ -5,7 +5,7 @@
    createScene({ canvas, overlay, complete, signal }) 이 돌려줄 것:
      { scene, camera, controls, pickTargets, resize(w, h), update(dt, state) }
    - pickTargets 의 mesh.userData.body = { id, title, text } 를 누르면 설명 카드가 뜨고
-     "pick:<id>" 미션이 있으면 성공 처리된다.
+     "pick:<id>" 미션이 있으면 성공 처리된다. 화면 밖 천체 버튼처럼 장면이 직접 pick(body) 를 불러도 같다.
    - complete(missionId) 로 미션 성공을 알린다.
 
    content.slider = { label, min, max, step, value, format(v) } 를 주면 값 조절 막대가 생긴다.
@@ -148,20 +148,21 @@ function setupPicking({ canvas, camera, targets, info, onPick, signal }) {
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
       const body = raycaster.intersectObjects(targets, false)[0]?.object.userData.body;
-      if (!body) {
-        hide();
-        return;
-      }
-
-      titleEl.textContent = body.title;
-      textEl.textContent = body.text;
-      info.hidden = false;
-      window.clearTimeout(hideTimer);
-      hideTimer = window.setTimeout(hide, 12000);
-      onPick(body);
+      if (body) show(body);
+      else hide();
     },
     { signal }
   );
+
+  function show(body) {
+    titleEl.textContent = body.title;
+    textEl.textContent = body.text;
+    info.hidden = false;
+    window.clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(hide, 12000);
+    onPick(body);
+  }
+  return show;
 }
 
 export function createSceneLesson({ content, createScene }) {
@@ -239,9 +240,10 @@ export function createSceneLesson({ content, createScene }) {
       if (renderer) {
         const canvas = renderer.domElement;
         stage.prepend(canvas);
-        view = createScene({ canvas, overlay: $(".stage__overlay"), complete, signal });
+        let showBody = null;
+        view = createScene({ canvas, overlay: $(".stage__overlay"), complete, signal, pick: (body) => showBody(body) });
 
-        setupPicking({
+        showBody = setupPicking({
           canvas,
           camera: view.camera,
           targets: view.pickTargets,

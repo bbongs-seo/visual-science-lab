@@ -13,7 +13,7 @@ import {
   createSun,
   SCALE,
 } from "../../../shared/three/space.js";
-import { eclipseAt, moonPhaseName } from "../../../shared/astro.js";
+import { SHADOW_SPREAD, SHADOW_TAPER, eclipseAt, moonPhaseName } from "../../../shared/astro.js";
 
 const MOON_ORBIT_SPEED = 18; // '보통' 속도에서 초당 도는 각(도): 20초에 한 바퀴
 const EARTH_SPIN = 0.25;
@@ -71,6 +71,36 @@ function receiveEarthShadow(material, shadowSphere, light) {
   };
 }
 
+/** 구가 햇빛 반대쪽(+x, 태양은 -x 에 있다)으로 드리우는 그림자 원뿔. spread 가 음수면 좁아지는 본그림자 */
+function shadowCone(radius, length, spread, opacity) {
+  const far = Math.max(radius + spread * length, 0.001);
+  const geometry = new THREE.CylinderGeometry(far, radius, length, 48, 1, true);
+  geometry.translate(0, length / 2, 0);
+  geometry.rotateZ(-Math.PI / 2); // 원기둥 축(+y)을 +x 로
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xff4d6d,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    side: THREE.BackSide, // 안쪽 뒷벽만 그려야 천체 밤쪽 면에 붉은 막이 씌지 않는다
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.opacity = opacity;
+  mesh.visible = false;
+  return mesh;
+}
+
+/** 식이 일어나는 동안에만 그림자 원뿔을 서서히 보여 준다 */
+function fadeCones(cones, show, dt) {
+  for (const cone of cones) {
+    const target = show ? cone.userData.opacity : 0;
+    const m = cone.material;
+    m.opacity += (target - m.opacity) * Math.min(1, dt * 6);
+    if (dt === 0) m.opacity = target; // 첫 프레임
+    cone.visible = m.opacity > 0.005;
+  }
+}
+
 export function createScene({ canvas, overlay, complete }) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 400);
@@ -81,7 +111,7 @@ export function createScene({ canvas, overlay, complete }) {
     wideTargetX: -3.5,
     narrowTargetX: 0,
     wideDistance: 17.5,
-    narrowDistance: 21,
+    narrowDistance: 13, // 좁은 화면은 지구·달을 따라가므로 궤도 전체가 들어갈 만큼 물러나지 않는다
     targetY: 0,
     narrowTargetY: 1.6,
   };
@@ -148,6 +178,20 @@ export function createScene({ canvas, overlay, complete }) {
   scene.add(moon);
   const moonTouch = addTouchTarget(moon, 0.7);
 
+  /* ---- 그림자 원뿔: 실제 크기로는 지구에 떨어진 달 그림자가 점만 해서 공간에 뻗은 그림자를 함께 그린다 ---- */
+  const moonReach = ORBIT; // 지구 중심까지 (지구 안쪽은 가려진다)
+  const earthReach = ORBIT + EARTH_RADIUS * 0.5; // 달 궤도를 조금 지나서까지
+  const moonCones = [
+    shadowCone(MOON_RADIUS, moonReach, -SHADOW_TAPER, 0.55),
+    shadowCone(MOON_RADIUS, moonReach, SHADOW_SPREAD, 0.18),
+  ];
+  const earthCones = [
+    shadowCone(EARTH_RADIUS, earthReach, -SHADOW_TAPER, 0.45),
+    shadowCone(EARTH_RADIUS, earthReach, SHADOW_SPREAD, 0.15),
+  ];
+  earthCones.forEach((cone) => cone.position.copy(earthPosition));
+  scene.add(...moonCones, ...earthCones);
+
   /* ---- 화면 위 글씨 ---- */
   const labels = {
     moonShadow: createLabel(overlay, "달 그림자", "shadow"),
@@ -178,6 +222,8 @@ export function createScene({ canvas, overlay, complete }) {
 
   const moonDir = new THREE.Vector3();
   const anchor = new THREE.Vector3();
+  const follow = new THREE.Vector3();
+  let narrow = false;
   let phase = START_PHASE;
 
   return {
@@ -190,6 +236,7 @@ export function createScene({ canvas, overlay, complete }) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       applyResponsiveFraming(camera, controls, width, height, framing);
+      narrow = width / height < 0.85;
     },
 
     update(dt, state) {
@@ -209,10 +256,22 @@ export function createScene({ canvas, overlay, complete }) {
       moon.position.copy(earthPosition).addScaledVector(moonDir, ORBIT);
       moon.rotation.y = a; // 늘 같은 얼굴을 지구 쪽으로
       moonShadowOnEarth.set(moon.position.x, moon.position.y, moon.position.z, MOON_RADIUS);
+      moonCones.forEach((cone) => cone.position.copy(moon.position));
+
+      // 좁은 화면: 궤도 전체 대신 지구와 달 사이를 따라가며 크게 보여 준다. 카메라도 같이 옮겨 돌려 본 각도는 지킨다
+      if (narrow) {
+        follow.copy(earthPosition).lerp(moon.position, 0.5).sub(controls.target);
+        follow.y = 0;
+        follow.multiplyScalar(dt === 0 ? 1 : Math.min(1, dt * 4));
+        controls.target.add(follow);
+        camera.position.add(follow);
+      }
       controls.update();
 
       /* 식 판정과 하늘 그림 */
       const eclipse = eclipseAt(phase, SIZES);
+      fadeCones(moonCones, eclipse.type === "solar" && eclipse.kind !== null, dt);
+      fadeCones(earthCones, eclipse.type === "lunar" && eclipse.kind !== null, dt);
       if (eclipse.kind === "total") complete(eclipse.type === "solar" ? "solar-total" : "lunar-total");
       // 개기일식은 아주 좁은 순간이라 빠르게 돌 때 프레임 사이로 건너뛸 수 있다: 한 줄을 지나쳤는지도 본다
       if (!state.paused && passed(before, phase, 0)) complete("solar-total");

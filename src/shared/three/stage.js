@@ -68,12 +68,58 @@ export function createLabel(parent, text, modifier = "") {
 
   return {
     el,
-    place(worldPosition, camera, width, height, visible = true) {
+    x: 0,
+    y: 0, // 마지막으로 놓인 화면 위치(px). 이름표끼리 겹침을 피할 때 쓴다
+    /** dy: 화면에서 아래로 더 내릴 거리(px) */
+    place(worldPosition, camera, width, height, visible = true, dy = 0) {
       projected.copy(worldPosition).project(camera);
-      const x = (projected.x * 0.5 + 0.5) * width;
-      const y = (-projected.y * 0.5 + 0.5) * height;
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
+      this.x = (projected.x * 0.5 + 0.5) * width;
+      this.y = (-projected.y * 0.5 + 0.5) * height + dy;
+      el.style.transform = `translate(${this.x.toFixed(1)}px, ${this.y.toFixed(1)}px) translate(-50%, -50%)`;
       el.classList.toggle("is-visible", visible && projected.z < 1);
+    },
+  };
+}
+
+/** 반지름 radius 인 구가 position 에 있을 때 화면에서 보이는 반지름(px) */
+export function projectedRadius(position, radius, camera, height) {
+  const distance = camera.position.distanceTo(position);
+  return (radius / (distance * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)))) * (height / 2);
+}
+
+/** 천체가 화면 밖에 있을 때 가장자리에 붙는 버튼. 누르면 onPress, 화면 안에 들어오면 숨는다.
+   place 의 reach(px): 중심이 화면 밖이어도 이만큼 안쪽까지 보이면 화면 안으로 친다 */
+export function createEdgePointer(parent, text, onPress, signal) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "edge-pointer";
+  el.hidden = true;
+  parent.append(el);
+  el.addEventListener("click", onPress, { signal });
+  const projected = new THREE.Vector3();
+  const MARGIN = 12;
+  let shown = "";
+
+  return {
+    el,
+    place(worldPosition, camera, width, height, reach = 0) {
+      projected.copy(worldPosition).project(camera);
+      if (projected.z > 1) projected.multiplyScalar(-1); // 카메라 뒤에 있으면 방향이 뒤집힌다
+      let x = (projected.x * 0.5 + 0.5) * width;
+      let y = (-projected.y * 0.5 + 0.5) * height;
+      const inside =
+        projected.z <= 1 && x >= -reach && x <= width + reach && y >= -reach && y <= height + reach;
+      el.hidden = inside;
+      if (inside) return;
+
+      const side = x < 0 ? "◀" : x > width ? "▶" : y < 0 ? "▲" : "▼";
+      const label = side === "▶" || side === "▼" ? `${text} ${side}` : `${side} ${text}`;
+      if (label !== shown) el.textContent = shown = label;
+      const w = el.offsetWidth / 2 + MARGIN;
+      const h = el.offsetHeight / 2 + MARGIN;
+      x = THREE.MathUtils.clamp(x, w, width - w);
+      y = THREE.MathUtils.clamp(y, h, height - h);
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
     },
   };
 }

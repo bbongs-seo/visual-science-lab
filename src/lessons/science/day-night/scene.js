@@ -1,8 +1,10 @@
 import * as THREE from "three";
 import {
   applyResponsiveFraming,
+  createEdgePointer,
   createLabel,
   createOrbitControls,
+  projectedRadius,
 } from "../../../shared/three/stage.js";
 import {
   createEarth,
@@ -21,7 +23,7 @@ const TAU = Math.PI * 2;
 const DAY_OFFSET = new THREE.Vector3(0, 0.95, 0.4);
 const NIGHT_OFFSET = new THREE.Vector3(0, -0.75, 0.4);
 
-export function createScene({ canvas, overlay, complete }) {
+export function createScene({ canvas, overlay, complete, signal, pick }) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 400);
   const controls = createOrbitControls(camera, canvas, { minDistance: 5, maxDistance: 45 });
@@ -87,6 +89,8 @@ export function createScene({ canvas, overlay, complete }) {
     night: createLabel(overlay, "🌙 밤", "night"),
     seoul: createLabel(overlay, "서울", "pin"),
   };
+  // 휴대폰처럼 좁은 화면에서는 태양이 화면 밖이라 가장자리 버튼으로 대신 누른다
+  const sunPointer = createEdgePointer(overlay, "☀️ 태양", () => pick(sun.mesh.userData.body), signal);
   const dayAnchor = new THREE.Vector3();
   const nightAnchor = new THREE.Vector3();
 
@@ -168,6 +172,8 @@ export function createScene({ canvas, overlay, complete }) {
       toCamera.copy(camera.position).sub(tipWorld);
       const facing = seoulDir.dot(toCamera) > 0;
       labels.seoul.place(tipWorld, camera, width, height, facing);
+      // 태양 원반이 화면에 걸려 있으면(넓은 화면) 직접 누를 수 있으니 버튼을 숨긴다
+      sunPointer.place(sunPosition, camera, width, height, projectedRadius(sunPosition, SCALE.sunRadius * 0.8, camera, height));
     },
   };
 }

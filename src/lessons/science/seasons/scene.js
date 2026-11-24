@@ -3,6 +3,7 @@ import {
   applyResponsiveFraming,
   createLabel,
   createOrbitControls,
+  projectedRadius,
 } from "../../../shared/three/stage.js";
 import {
   createEarth,
@@ -33,13 +34,15 @@ const EARTH_RADIUS = SCALE.earthRadius * 1.6;
 const START_DAY = 110; // 4월 21일: 조금 기다리면 여름으로 들어간다
 const TAU = Math.PI * 2;
 
-// 이름표를 궤도 바깥에 두면 좁은 화면에서 잘리거나 앞쪽 지구를 가리므로, 뒤쪽(추분) 말고는 지구가 설 자리 바로 아래에 둔다
+// 이름표를 궤도 바깥에 두면 좁은 화면에서 잘리므로 지구가 설 자리 바로 아래에 둔다.
+// 휴대폰에서는 지구가 작게 보여 3D 거리로 띄우면 겹치니, 화면에 보이는 지구 크기(px)만큼 내린다
 const TURNING_POINTS = [
-  { day: 171, text: "6월 · 하지", out: 0, down: EARTH_RADIUS + 0.75 },
-  { day: 265, text: "9월 · 추분", out: 2.2, down: 0 },
-  { day: 355, text: "12월 · 동지", out: 0, down: EARTH_RADIUS + 0.75 },
-  { day: 79, text: "3월 · 춘분", out: 0, down: EARTH_RADIUS + 0.75 },
+  { day: 171, text: "6월 · 하지" },
+  { day: 265, text: "9월 · 추분" },
+  { day: 355, text: "12월 · 동지" },
+  { day: 79, text: "3월 · 춘분" },
 ];
+const LABEL_GAP = 18; // 지구 가장자리에서 이름표 가운데까지(px)
 
 const GAUGE_SVG = `
   <svg class="gauge" viewBox="0 0 200 96" role="img" aria-label="서울의 한낮 해 높이와 막대 그림자">
@@ -103,7 +106,7 @@ export function createScene({ canvas, overlay, complete }) {
   };
   const markers = TURNING_POINTS.map((point) => ({
     label: createLabel(overlay, point.text, "season"),
-    position: orbitPosition(point.day, ORBIT_RADIUS + point.out, new THREE.Vector3()).setY(-point.down),
+    position: orbitPosition(point.day, ORBIT_RADIUS, new THREE.Vector3()),
   }));
 
   /* ---- 지구: 자전축은 공전하는 내내 같은 쪽을 가리킨다 ---- */
@@ -229,16 +232,28 @@ export function createScene({ canvas, overlay, complete }) {
       /* 이름표 위치 */
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
-      markers.forEach((marker) => marker.label.place(marker.position, camera, width, height));
-
-      anchor.copy(earthPosition).addScaledVector(axis, EARTH_RADIUS * 1.75);
-      labels.pole.place(anchor, camera, width, height);
+      markers.forEach((marker) => {
+        const below = projectedRadius(marker.position, EARTH_RADIUS, camera, height) + LABEL_GAP;
+        marker.label.place(marker.position, camera, width, height, true, below);
+      });
 
       earth.mesh.updateWorldMatrix(true, true);
       seoul.tip.getWorldPosition(tipWorld);
       seoulDir.copy(tipWorld).sub(earthPosition);
       toCamera.copy(camera.position).sub(tipWorld);
-      labels.seoul.place(tipWorld, camera, width, height, seoulDir.dot(toCamera) > 0);
+      const seoulVisible = seoulDir.dot(toCamera) > 0;
+      labels.seoul.place(tipWorld, camera, width, height, seoulVisible);
+
+      // 북극 이름표가 서울 이름표와 겹치면 서울 이름표 위로 올린다
+      anchor.copy(earthPosition).addScaledVector(axis, EARTH_RADIUS * 1.75);
+      labels.pole.place(anchor, camera, width, height);
+      const { seoul: s, pole: p } = labels;
+      const seoulY = s.y + s.el.offsetTop; // 서울 이름표는 CSS margin-top 으로 핀 위에 떠 있다
+      const gap = (p.el.offsetHeight + s.el.offsetHeight) / 2 + 4;
+      const overlapX = Math.abs(p.x - s.x) < (p.el.offsetWidth + s.el.offsetWidth) / 2;
+      if (seoulVisible && overlapX && p.y > seoulY - gap && p.y < seoulY + 4) {
+        labels.pole.place(anchor, camera, width, height, true, seoulY - gap - p.y);
+      }
     },
   };
 }
