@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   angleForHour,
+  dayLength,
+  eclipseAt,
+  moonPhaseName,
+  dayToDate,
+  describeDay,
+  describeDuration,
+  noonAltitude,
+  seasonOf,
+  sunDeclination,
   describeHour,
   describeTide,
   signedAngleAround,
@@ -64,5 +73,82 @@ describe("tideLevel · describeTide", () => {
     expect(describeTide(-0.9, false).key).toBe("low");
     expect(describeTide(0, true).key).toBe("rising");
     expect(describeTide(0, false).key).toBe("falling");
+  });
+});
+
+describe("계절 계산", () => {
+  const SEOUL = 37.57;
+
+  it("하지·동지·춘분에 태양이 적도에서 벗어난 각", () => {
+    expect(sunDeclination(171)).toBeCloseTo(23.44, 1);
+    expect(sunDeclination(171 + 182.5)).toBeCloseTo(-23.44, 1);
+    expect(Math.abs(sunDeclination(79))).toBeLessThan(1.5);
+  });
+
+  it("서울의 한낮 해 높이와 낮 길이: 여름에 높고 길다", () => {
+    expect(noonAltitude(SEOUL, 23.44)).toBeCloseTo(75.87, 1);
+    expect(noonAltitude(SEOUL, -23.44)).toBeCloseTo(28.99, 1);
+    expect(dayLength(SEOUL, 23.44)).toBeCloseTo(14.6, 1);
+    expect(dayLength(SEOUL, -23.44)).toBeCloseTo(9.4, 1);
+    expect(dayLength(SEOUL, 0)).toBeCloseTo(12, 5);
+  });
+
+  it("북극은 하지에 백야, 동지에 극야", () => {
+    expect(dayLength(89, 23.44)).toBe(24);
+    expect(dayLength(89, -23.44)).toBe(0);
+  });
+
+  it.each([
+    [0, "1월 1일", "겨울"],
+    [58, "2월 28일", "겨울"],
+    [59, "3월 1일", "봄"],
+    [171, "6월 21일 하지", "여름"],
+    [355, "12월 22일 동지", "겨울"],
+    [364, "12월 31일", "겨울"],
+    [365, "1월 1일", "겨울"],
+  ])("%s일째 → %s (%s)", (day, text, season) => {
+    expect(describeDay(day)).toBe(text);
+    expect(seasonOf(day)).toBe(season);
+  });
+
+  it("시간 표시", () => {
+    expect(describeDuration(14.6)).toBe("14시간 36분");
+    expect(dayToDate(31)).toEqual({ month: 2, date: 1 });
+  });
+});
+
+describe("일식·월식", () => {
+  const sizes = { orbit: 5, earthRadius: 1, moonRadius: 0.27 }; // space.js SCALE
+
+  it.each([
+    [0, "solar", "total"],
+    [3, "solar", "partial"],
+    [30, "solar", null],
+    [180, "lunar", "total"],
+    [188, "lunar", "partial"],
+    [150, "lunar", null],
+    [100, "lunar", null],
+  ])("달이 %s도에 있으면 %s %s", (deg, type, kind) => {
+    const result = eclipseAt(deg, sizes);
+    expect(result.type).toBe(type);
+    expect(result.kind).toBe(kind);
+  });
+
+  it("일식은 한가운데일수록 해가 많이 가려진다", () => {
+    expect(eclipseAt(0, sizes).reveal).toBe(0);
+    expect(eclipseAt(3, sizes).reveal).toBeGreaterThan(0);
+    expect(eclipseAt(3, sizes).reveal).toBeLessThan(1);
+  });
+
+  it.each([
+    [0, "삭"],
+    [45, "초승달"],
+    [90, "상현달"],
+    [180, "보름달"],
+    [270, "하현달"],
+    [320, "그믐달"],
+    [359, "삭"],
+  ])("%s도 → %s", (deg, name) => {
+    expect(moonPhaseName(deg)).toBe(name);
   });
 });

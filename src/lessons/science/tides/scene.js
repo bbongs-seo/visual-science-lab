@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import {
+  addTouchTarget,
   applyResponsiveFraming,
   createLabel,
   createOrbitControls,
@@ -11,13 +12,14 @@ import {
   createPin,
   createStars,
   latLonToVector3,
+  SCALE,
 } from "../../../shared/three/space.js";
 import { describeTide, signedAngleAround, tideLevel } from "../../../shared/astro.js";
 
 const INCHEON = { lat: 37.46, lon: 126.6 };
 const EARTH_SPIN = 0.42; // '보통' 속도에서 초당 자전(라디안)
 const MOON_ORBIT = EARTH_SPIN / 10; // 실제(약 1/27)보다 빠르게: 달이 움직이는 게 눈에 보이도록
-const ORBIT_RADIUS = 3.3;
+const ORBIT_RADIUS = SCALE.moonDistance;
 
 const WATER_VERTEX = /* glsl */ `
   varying vec3 vNormalW;
@@ -73,14 +75,15 @@ const BEACH_SVG = `
 export function createScene({ canvas, overlay, complete, signal }) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 400);
-  const controls = createOrbitControls(camera, canvas, { minDistance: 8, maxDistance: 19 });
+  const controls = createOrbitControls(camera, canvas, { minDistance: 5, maxDistance: 26 });
   const framing = {
     direction: new THREE.Vector3(-0.65, 3.2, 12.2).normalize(),
     wideTargetX: 0.45,
     narrowTargetX: 0.45,
-    wideDistance: 10.8,
-    narrowDistance: 15.2,
+    wideDistance: 11,
+    narrowDistance: 21,
     targetY: 0,
+    narrowTargetY: 1.2,
   };
 
   scene.add(createStars(29));
@@ -93,7 +96,7 @@ export function createScene({ canvas, overlay, complete, signal }) {
 
   /* ---- 지구 ---- */
   const earthPosition = new THREE.Vector3(0.45, 0, 0);
-  const earthRadius = 1.35;
+  const earthRadius = SCALE.earthRadius;
 
   const tilt = new THREE.Group();
   tilt.position.copy(earthPosition);
@@ -162,7 +165,7 @@ export function createScene({ canvas, overlay, complete, signal }) {
 
   const moonPivot = new THREE.Group();
   orbit.add(moonPivot);
-  const moon = createMoon(0.46);
+  const moon = createMoon(SCALE.moonRadius);
   moon.position.set(-ORBIT_RADIUS, 0, 0);
   moon.userData.body = {
     id: "moon",
@@ -170,6 +173,7 @@ export function createScene({ canvas, overlay, complete, signal }) {
     text: "지구의 하나뿐인 자연 위성이에요. 지구에서 약 38만 km 떨어져 있어요. 달이 끌어당기는 힘이 바닷물을 움직여요.",
   };
   moonPivot.add(moon);
+  const moonTouch = addTouchTarget(moon, 0.8); // 작은 달도 손가락으로 잡기 쉽게
   let moonAngle = 0; // 화면 왼쪽에서 출발: 바닷물이 좌우로 길쭉하게 부푼 모습이 가장 잘 보인다
 
   /* 달 끌기: OrbitControls 보다 먼저 받으려고 무대에서 capture 단계로 듣는다 */
@@ -194,7 +198,7 @@ export function createScene({ canvas, overlay, complete, signal }) {
     (event) => {
       if (event.target !== canvas) return;
       toPointer(event);
-      if (!raycaster.intersectObject(moon, false).length) return;
+      if (!raycaster.intersectObject(moonTouch, false).length) return;
       controls.enabled = false;
       canvas.setPointerCapture(event.pointerId);
       const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(orbit.quaternion);
@@ -268,7 +272,7 @@ export function createScene({ canvas, overlay, complete, signal }) {
     scene,
     camera,
     controls,
-    pickTargets: [moon, water, earth.mesh],
+    pickTargets: [moonTouch, water, earth.mesh],
 
     resize(width, height) {
       camera.aspect = width / height;

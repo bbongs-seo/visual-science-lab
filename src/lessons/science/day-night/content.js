@@ -1,8 +1,11 @@
+import { describeHour } from "../../../shared/astro.js";
+
 export default {
   stageLabel: "태양 빛을 받으며 자전하는 지구 3D 화면. 끌어서 돌려 볼 수 있어요.",
   badge: "태양 빛과 지구의 자전",
-  hint: "화면을 끌면 우주를 빙 둘러볼 수 있어요. 태양과 지구를 눌러 보세요!",
+  hint: "화면을 끌면 우주를 빙 둘러볼 수 있어요. 아래 막대를 밀면 서울 시각을 바꿀 수 있어요!",
   speedLabel: "자전 속도",
+  slider: { label: "서울 시각", min: 0, max: 24, step: 0.25, value: 7, format: describeHour },
 
   missions: [
     { id: "pick:sun", text: "태양을 눌러서 어떤 별인지 알아보기" },

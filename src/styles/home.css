@@ -99,6 +99,16 @@
   gap: 18px;
 }
 
+.category-title {
+  margin: 22px 0 12px;
+  color: var(--sun);
+  font-size: 19px;
+}
+
+.subject__head + .category-title {
+  margin-top: 0;
+}
+
 /* ---------------- 레슨 카드 ---------------- */
 
 .lesson-card {
@@ -225,6 +235,24 @@
     radial-gradient(circle at 26% 40%, rgba(255, 236, 190, 0.18), transparent 45%),
     linear-gradient(90deg, transparent 36%, rgba(3, 5, 22, 0.75) 50%, rgba(3, 5, 22, 0.96) 60%);
   box-shadow: inset 6px 0 14px rgba(255, 220, 160, 0.3);
+}
+
+/* 사계절: 북극이 태양(왼쪽) 쪽으로 23.5도 기운 지구 */
+.cover__planet--tilt {
+  rotate: -23.5deg;
+}
+
+.cover__planet--tilt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  bottom: -18px;
+  z-index: 1;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(255, 230, 160, 0.85);
+  border-radius: 2px;
 }
 
 @keyframes cover-spin {

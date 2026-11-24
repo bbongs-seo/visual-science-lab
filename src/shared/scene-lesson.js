@@ -6,7 +6,11 @@
      { scene, camera, controls, pickTargets, resize(w, h), update(dt, state) }
    - pickTargets 의 mesh.userData.body = { id, title, text } 를 누르면 설명 카드가 뜨고
      "pick:<id>" 미션이 있으면 성공 처리된다.
-   - complete(missionId) 로 미션 성공을 알린다. */
+   - complete(missionId) 로 미션 성공을 알린다.
+
+   content.slider = { label, min, max, step, value, format(v) } 를 주면 값 조절 막대가 생긴다.
+   - 아이가 막대를 움직이면 state.slider 에 값이 들어가고 장면이 멈춘다(state.paused).
+   - 장면은 멈춰 있을 때 state.slider 를 따르고, 움직이는 동안에는 지금 값을 state.slider 에 써서 막대가 따라오게 한다. */
 
 import * as THREE from "three";
 import { getRenderer, disposeScene } from "./three/stage.js";
@@ -58,6 +62,15 @@ function template(entry, content, progress) {
         ).join("")}
       </div>
       <button class="btn btn--ghost" type="button" data-act="narrate">🔊 설명 듣기</button>
+      ${
+        content.slider
+          ? `<label class="slider">
+        <span class="slider__label">${content.slider.label}</span>
+        <input class="slider__input" type="range" min="${content.slider.min}" max="${content.slider.max}" step="${content.slider.step}" value="${content.slider.value}" />
+        <output class="slider__value"></output>
+      </label>`
+          : ""
+      }
     </div>
 
     <div class="lesson-grid">
@@ -192,7 +205,20 @@ export function createSceneLesson({ content, createScene }) {
       };
 
       /* ---- 3D 무대 ---- */
-      const state = { paused: false, speed: 1 };
+      const state = { paused: false, speed: 1, slider: content.slider?.value };
+      const sliderInput = $(".slider__input");
+      const sliderValue = $(".slider__value");
+      let sliderText = null;
+      // 장면이 바꾼 값을 막대와 숫자에 반영한다 (매 프레임 불리므로 글자는 바뀔 때만 고친다)
+      function showSlider() {
+        if (!sliderInput) return;
+        sliderInput.value = state.slider;
+        const text = content.slider.format ? content.slider.format(state.slider) : String(state.slider);
+        if (text === sliderText) return;
+        sliderText = text;
+        sliderValue.textContent = text;
+        sliderInput.setAttribute("aria-valuetext", text);
+      }
       let view = null;
       let renderer = null;
       let observer = null;
@@ -235,6 +261,7 @@ export function createSceneLesson({ content, createScene }) {
           const dt = last === null ? 0 : Math.min(Math.max((now - last) / 1000, 0), 0.05);
           last = now;
           view.update(dt, state);
+          showSlider();
           renderer.render(view.scene, view.camera);
           raf = window.requestAnimationFrame(frame);
         };
@@ -247,12 +274,20 @@ export function createSceneLesson({ content, createScene }) {
 
       /* ---- 컨트롤 ---- */
       const pauseButton = $('[data-act="pause"]');
-      pauseButton.addEventListener(
-        "click",
+      const setPaused = (paused) => {
+        state.paused = paused;
+        pauseButton.setAttribute("aria-pressed", String(paused));
+        pauseButton.textContent = paused ? "▶ 이어서 보기" : "⏸ 잠깐 멈추기";
+      };
+      pauseButton.addEventListener("click", () => setPaused(!state.paused), { signal });
+
+      showSlider();
+      sliderInput?.addEventListener(
+        "input",
         () => {
-          state.paused = !state.paused;
-          pauseButton.setAttribute("aria-pressed", String(state.paused));
-          pauseButton.textContent = state.paused ? "▶ 이어서 보기" : "⏸ 잠깐 멈추기";
+          state.slider = Number(sliderInput.value);
+          setPaused(true);
+          showSlider();
         },
         { signal }
       );

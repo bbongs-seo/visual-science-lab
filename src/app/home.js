@@ -13,7 +13,7 @@ function renderCover(cover) {
   return `
     <div class="cover cover--space" aria-hidden="true">
       ${cover.sun ? `<span class="cover__sun"></span>` : ""}
-      <span class="cover__planet${cover.terminator ? " cover__planet--terminator" : ""}" style="--map:${texture("earth-day.webp")}"></span>
+      <span class="cover__planet${cover.terminator ? " cover__planet--terminator" : ""}${cover.tilt ? " cover__planet--tilt" : ""}" style="--map:${texture("earth-day.webp")}"></span>
       ${cover.moon ? `<span class="cover__orbit"><span class="cover__moon" style="--map:${texture("moon.webp")}"></span></span>` : ""}
     </div>`;
 }
@@ -69,13 +69,23 @@ export function renderHome(root) {
     ${SUBJECTS.map((subject) => {
       const lessons = LESSONS.filter((lesson) => lesson.subject === subject.id);
       if (!lessons.length) return "";
+      const groups = subject.categories
+        ? subject.categories.map((c) => ({ ...c, lessons: lessons.filter((l) => l.category === c.id) }))
+        : [{ lessons }];
       return `
         <section class="subject" aria-labelledby="subject-${subject.id}">
           <div class="subject__head">
             <h2 id="subject-${subject.id}"><span aria-hidden="true">${subject.icon}</span> ${subject.title}</h2>
             <p>${subject.blurb}</p>
           </div>
-          <div class="lesson-list">${lessons.map(renderCard).join("")}</div>
+          ${groups
+            .filter((group) => group.lessons.length)
+            .map(
+              (group) => `
+            ${group.title ? `<h3 class="category-title">${group.title}</h3>` : ""}
+            <div class="lesson-list">${group.lessons.map(renderCard).join("")}</div>`
+            )
+            .join("")}
         </section>`;
     }).join("")}
 

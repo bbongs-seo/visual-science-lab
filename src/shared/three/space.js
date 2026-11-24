@@ -2,6 +2,34 @@
    지구·달 사진은 NASA 퍼블릭 도메인 이미지(public/textures), 구름과 빛무리는 캔버스로 그린다. */
 
 import * as THREE from "three";
+import { SHADOW_SPREAD, SHADOW_TAPER } from "../astro.js";
+
+/**
+ * 모든 우주 레슨이 함께 쓰는 크기·거리 (지구 반지름 = 1).
+ * 실제 비율(태양 반지름 109, 태양까지 23,500, 달 반지름 0.27, 달까지 60)을 그대로 쓰면 지구가 점이 되므로
+ * '태양 ≫ 지구 > 달' 크기 순서와 '태양은 아주 멀다'는 느낌만 지키도록 줄였다. 달 크기만 실제 비율 그대로다.
+ */
+export const SCALE = {
+  earthRadius: 1,
+  moonRadius: 0.27,
+  moonDistance: 5,
+  sunRadius: 4.5,
+  sunDistance: 16,
+};
+
+/** 구(shadowSphere: xyz 중심, w 반지름)가 빛(l 쪽에서 오는)을 가리는 정도: 0 본그림자 ~ 1 밝음. w=0 이면 그림자 없음 */
+export const SPHERE_SHADOW_GLSL = /* glsl */ `
+  float sphereShadow(vec3 p, vec3 l, vec4 s) {
+    if (s.w <= 0.0) return 1.0;
+    vec3 toS = s.xyz - p;
+    float t = dot(toS, l);
+    if (t <= 0.0) return 1.0;
+    float d = length(toS - l * t);
+    float umbra = max(s.w - t * ${SHADOW_TAPER.toFixed(4)}, 0.0);
+    float penumbra = s.w + t * ${SHADOW_SPREAD.toFixed(4)};
+    return smoothstep(umbra, penumbra, d);
+  }
+`;
 
 /* ---------------------------------------------------------
    텍스처
@@ -202,10 +230,13 @@ const EARTH_FRAGMENT = /* glsl */ `
   uniform sampler2D cloudMap;
   uniform vec3 sunDirection;
   uniform float cloudShift;
+  uniform vec4 shadowSphere;
 
   varying vec2 vUv;
   varying vec3 vNormalW;
   varying vec3 vWorldPos;
+
+  ${SPHERE_SHADOW_GLSL}
 
   void main() {
     vec3 n = normalize(vNormalW);
@@ -226,6 +257,7 @@ const EARTH_FRAGMENT = /* glsl */ `
     float glint = pow(max(dot(n, h), 0.0), 60.0) * ocean * (1.0 - cloud);
     lit += vec3(1.0, 0.86, 0.62) * glint * 0.7 * step(0.0, ndl);
     lit = mix(lit, vec3(0.95, 0.97, 1.0) * (0.03 + 1.05 * max(ndl, 0.0)), cloud * 0.82);
+    lit *= mix(0.06, 1.0, sphereShadow(vWorldPos, l, shadowSphere)); // 일식: 달 그림자
 
     // 밤: 도시 불빛만 따뜻하게 살리고 구름이 덮인 곳은 흐리게
     vec3 night = texture2D(nightMap, vUv).rgb;
@@ -275,6 +307,7 @@ export function createEarth(radius, sunDirection) {
       cloudMap: { value: cloudTexture() },
       sunDirection: { value: direction },
       cloudShift: { value: 0 },
+      shadowSphere: { value: new THREE.Vector4() }, // 일식 레슨만 채운다
     },
     vertexShader: WORLD_VERTEX,
     fragmentShader: EARTH_FRAGMENT,

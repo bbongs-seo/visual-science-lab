@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { parseHash } from "../src/app/router.js";
-import { LESSONS } from "../src/catalog.js";
+import { LESSONS, SUBJECTS } from "../src/catalog.js";
 import { completeMission, getLessonProgress, recordQuiz, totalStars } from "../src/shared/progress.js";
 
 const lessonContents = import.meta.glob("../src/lessons/**/content.js", { eager: true });
@@ -24,6 +24,14 @@ describe("catalog", () => {
       const content = lessonContents[`../src/lessons/${id}/content.js`]?.default;
       expect(content, `src/lessons/${id}/content.js 가 없어요`).toBeTruthy();
       expect(lesson.stars).toBe(content.missions.length + content.quiz.length);
+    }
+  );
+
+  it.each(LESSONS.map((lesson) => [lesson.id, lesson]))(
+    "%s: 과목에 묶음이 있으면 그중 하나에 속한다 (아니면 홈에서 사라진다)",
+    (id, lesson) => {
+      const categories = SUBJECTS.find((s) => s.id === lesson.subject).categories;
+      if (categories) expect(categories.map((c) => c.id)).toContain(lesson.category);
     }
   );
 });

@@ -5,7 +5,9 @@
 
 | 레슨 | 해 볼 수 있는 것 |
 | --- | --- |
-| 낮과 밤이 생기는 이유 | 자전하는 지구에 꽂힌 서울 핀과 시계로 아침·낮·저녁·밤이 바뀌는 순간을 지켜보기 |
+| 낮과 밤이 생기는 이유 | 자전하는 지구에 꽂힌 서울 핀과 시계로 아침·낮·저녁·밤이 바뀌는 순간을 지켜보고, 시각 막대로 서울 시간을 직접 옮겨 보기 |
+| 사계절이 생기는 이유 | 날짜 막대로 기울어진 지구를 공전 궤도 위에서 옮기며 서울의 한낮 해 높이·낮 길이·막대 그림자 비교하기 |
+| 일식과 월식이 생기는 이유 | 달을 옮겨 해·달·지구를 한 줄로 세우고, 지구에서 본 하늘과 붉게 물드는 달 보기 |
 | 밀물과 썰물이 생기는 이유 | 달을 손으로 끌어 옮기면 바닷물이 따라 부풀고, 인천 바닷가 물높이가 오르내리는 모습 보기 |
 
 레슨마다 탐험 미션 3개와 확인 퀴즈 3문제가 있고, 해낸 만큼 별을 모읍니다.
@@ -46,12 +48,12 @@ src/
   shared/
     scene-lesson.js      3D 레슨 공통 화면: 무대·컨트롤·음성·미션·퀴즈·정리
     three/               공유 렌더러, 지구·태양·달·별 만들기, 셰이더
-    astro.js             시각·물높이 계산 (순수 함수, 테스트 대상)
+    astro.js             시각·물높이·계절·일식 계산 (순수 함수, 테스트 대상)
     progress.js          별 기록 (이 기기 localStorage)
     narration.js, quiz.js, toast.js
   lessons/science/
     day-night/           content.js(글·미션·퀴즈) + scene.js(3D 장면)
-    tides/
+    seasons/ eclipse/ tides/
   styles/                공통·홈·레슨 스타일
 tests/                   vitest 단위 테스트
 ```
@@ -62,7 +64,8 @@ tests/                   vitest 단위 테스트
    - `content.js`: 배지·힌트·미션·원리 설명·음성 문장·퀴즈 (기존 레슨 형식 참고)
    - `scene.js`: `createScene({ canvas, overlay, complete, signal })` 이 `{ scene, camera, controls, pickTargets, resize, update }` 를 돌려주도록 작성
    - `index.js`: `createSceneLesson({ content, createScene })`
-2. `src/catalog.js`의 `LESSONS`에 한 줄을 추가합니다. `stars`는 미션 수 + 퀴즈 수와 같아야 하며 테스트가 확인합니다.
+2. `src/catalog.js`의 `LESSONS`에 한 줄을 추가합니다. `stars`는 미션 수 + 퀴즈 수와 같아야 하고, `category`는 과목의 묶음(`space` 우주와 지구, `physics` 빛과 파동·일상 속 물리) 중 하나여야 합니다. 둘 다 테스트가 확인합니다.
+   - 값을 조절하는 막대가 필요하면 `content.js`에 `slider: { label, min, max, step, value, format }`을 넣습니다. 장면은 `state.paused`일 때 `state.slider`를 따르고, 움직이는 동안 지금 값을 `state.slider`에 씁니다.
 3. 수학처럼 3D가 아닌 레슨은 `mount(root, { entry })`가 `{ unmount() }`를 돌려주는 모듈이면 무엇이든 됩니다. 새 과목은 `SUBJECTS`에 추가하면 홈에 섹션이 생깁니다.
 
 미션 성공은 장면에서 `complete("미션-id")`를 부르면 됩니다. 천체 `userData.body.id`가 `sun`이면 그 천체를 눌렀을 때 `pick:sun` 미션이 자동으로 성공 처리됩니다.
@@ -70,6 +73,7 @@ tests/                   vitest 단위 테스트
 ## 구현 메모
 
 - 모든 레슨이 WebGL 렌더러 하나를 돌려 씁니다. 레슨을 떠날 때 장면의 geometry·material, 이벤트, 애니메이션 루프, 음성을 정리합니다.
+- 천체 크기·거리는 `src/shared/three/space.js`의 `SCALE` 하나를 모든 우주 레슨이 함께 씁니다(지구 반지름 1 기준 태양 4.5·16 떨어짐, 달 0.27·5 떨어짐). 실제(태양 109·23,500, 달 0.27·60)를 그대로 쓰면 지구가 점이 되어 크기 순서와 '멀다'는 느낌만 살렸고, 궤도 전체를 한 화면에 담는 사계절 레슨만 지구를 1.6배 키우고 궤도를 13으로 줄였습니다.
 - 화면 속 시간은 실제와 다릅니다. 낮과 밤 레슨은 약 20초에 하루가 지나고, 밀물과 썰물 레슨은 달이 실제(약 1/27)보다 빠르게(1/10) 돌며 바닷물 부푼 모양도 크게 과장했습니다. 레슨 설명에도 이 점을 적어 두었습니다.
 - 구름은 이미지 파일 없이 캔버스에서 좌우가 이어지는 노이즈로 그리고, 태양 표면은 셰이더로 끓어오르는 모습을 만듭니다.
 

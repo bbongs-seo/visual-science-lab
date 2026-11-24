@@ -10,6 +10,7 @@ import {
   createStars,
   createSun,
   latLonToVector3,
+  SCALE,
 } from "../../../shared/three/space.js";
 import { angleForHour, describeHour, signedAngleAround, solarHour } from "../../../shared/astro.js";
 
@@ -23,21 +24,22 @@ const NIGHT_OFFSET = new THREE.Vector3(0, -0.75, 0.4);
 export function createScene({ canvas, overlay, complete }) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 400);
-  const controls = createOrbitControls(camera, canvas, { minDistance: 7.5, maxDistance: 17 });
+  const controls = createOrbitControls(camera, canvas, { minDistance: 5, maxDistance: 45 });
+  // 넓은 화면: 왼쪽 끝에 커다란 태양 일부가 걸리게. 좁은 화면: 지구에 맞추고 태양은 빛무리만
   const framing = {
     direction: new THREE.Vector3(-1.2, 1.6, 11.5).normalize(),
-    wideTargetX: 1.25,
-    narrowTargetX: 0.35,
-    wideDistance: 11.8,
-    narrowDistance: 15,
+    wideTargetX: -5,
+    narrowTargetX: -0.3,
+    wideDistance: 13.5,
+    narrowDistance: 10,
     targetY: 0.05,
   };
 
   scene.add(createStars(11));
 
   /* ---- 태양 ---- */
-  const sunPosition = new THREE.Vector3(-3.7, 0.32, 0);
-  const sun = createSun(0.8);
+  const sunPosition = new THREE.Vector3(-SCALE.sunDistance, 0.3, 0);
+  const sun = createSun(SCALE.sunRadius);
   sun.group.position.copy(sunPosition);
   sun.mesh.userData.body = {
     id: "sun",
@@ -47,8 +49,8 @@ export function createScene({ canvas, overlay, complete }) {
   scene.add(sun.group);
 
   /* ---- 지구: 자전축을 23.4도 기울여 북반구가 살짝 보이게 ---- */
-  const earthPosition = new THREE.Vector3(1.0, 0, 0);
-  const earthRadius = 1.45;
+  const earthPosition = new THREE.Vector3(0, 0, 0);
+  const earthRadius = SCALE.earthRadius;
   const sunDirection = sunPosition.clone().sub(earthPosition).normalize();
 
   const tilt = new THREE.Group();
@@ -124,11 +126,14 @@ export function createScene({ canvas, overlay, complete }) {
         earth.mesh.rotation.y += step;
         earth.drift(step * 0.004);
         spun += step;
+      } else {
+        earth.mesh.rotation.y += angleForHour(state.slider) - seoulAngle(); // 시각 막대가 가리키는 시각으로 돌려 둔다
       }
       controls.update();
 
       /* 서울의 시각과 낮·밤 */
       const hour = solarHour(seoulAngle());
+      if (!state.paused) state.slider = hour;
       const isDay = seoulDir.dot(sunDirection) > 0;
       const days = Math.floor(spun / TAU);
       if (wasDay && !isDay) complete("seoul-night");

@@ -40,10 +40,21 @@ export function applyResponsiveFraming(camera, controls, width, height, options)
   const wide = THREE.MathUtils.clamp((aspect - 0.85) / 0.75, 0, 1);
   const targetX = THREE.MathUtils.lerp(options.narrowTargetX, options.wideTargetX, wide);
   const distance = THREE.MathUtils.lerp(options.narrowDistance, options.wideDistance, wide);
+  const targetY = options.targetY || 0;
+  const narrowTargetY = options.narrowTargetY ?? targetY;
 
-  controls.target.set(targetX, options.targetY || 0, 0);
+  controls.target.set(targetX, THREE.MathUtils.lerp(narrowTargetY, targetY, wide), 0);
   camera.position.copy(controls.target).addScaledVector(options.direction, distance);
   controls.update();
+}
+
+/** 작은 천체(달)를 손가락으로 누르기 쉽게 보이지 않는 큰 구를 붙인다. Raycaster 는 visible=false 도 맞힌다 */
+export function addTouchTarget(mesh, radius) {
+  const hit = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), new THREE.MeshBasicMaterial());
+  hit.visible = false;
+  hit.userData.body = mesh.userData.body;
+  mesh.add(hit);
+  return hit;
 }
 
 /** 3D 위치를 따라다니는 HTML 이름표 */
