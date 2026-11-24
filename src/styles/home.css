@@ -255,6 +255,94 @@
   border-radius: 2px;
 }
 
+/* 하늘과 노을: 위는 파란 하늘, 지평선 쪽은 노을빛, 반쯤 잠긴 해가 천천히 오르내린다 */
+.cover--sky {
+  background: linear-gradient(180deg, #2a6fd6 0%, #5aa9ea 38%, #ffb36b 78%, #ff6a3d 100%);
+}
+
+.cover--sky::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 22%;
+  background: #1d3b33;
+}
+
+.cover__sunset {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  width: 64px;
+  aspect-ratio: 1;
+  margin-left: -32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3c4 0%, #ffd34d 45%, #ff8a2a 100%);
+  box-shadow: 0 0 40px 14px rgba(255, 150, 60, 0.55);
+  animation: cover-sunset 9s ease-in-out infinite alternate;
+}
+
+@keyframes cover-sunset {
+  from {
+    transform: translateY(-70px);
+  }
+  to {
+    transform: translateY(20px);
+  }
+}
+
+/* 무지개: 비 갠 하늘에 일곱 색 반원 */
+.cover--rainbow {
+  background: linear-gradient(180deg, #4f8fd8 0%, #9cc8f0 70%, #d9ecf8 100%);
+}
+
+.cover__rainbow {
+  position: absolute;
+  left: 50%;
+  bottom: -150px;
+  width: 300px;
+  aspect-ratio: 1;
+  margin-left: -150px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    transparent 56%,
+    #bf5af2 56%,
+    #5e5ce6 60%,
+    #0a84ff 64%,
+    #34c759 68%,
+    #ffd60a 72%,
+    #ff9500 76%,
+    #ff3b30 80%,
+    transparent 84%
+  );
+  opacity: 0.85;
+}
+
+/* 비행기 날개: 하늘색 바탕에 날개 단면, 바람 줄이 왼쪽에서 오른쪽으로 흐른다 */
+.cover--wing {
+  background: linear-gradient(180deg, #3f7fd0 0%, #8cc1ef 100%);
+}
+
+.cover--wing svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cover__wind {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 3;
+  stroke-linecap: round;
+  animation: cover-wind 1.8s linear infinite;
+}
+
+@keyframes cover-wind {
+  to {
+    transform: translateX(400px);
+  }
+}
+
 @keyframes cover-spin {
   to {
     background-position: 200% 0;

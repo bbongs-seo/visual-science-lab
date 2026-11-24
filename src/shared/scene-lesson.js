@@ -10,7 +10,9 @@
 
    content.slider = { label, min, max, step, value, format(v) } 를 주면 값 조절 막대가 생긴다.
    - 아이가 막대를 움직이면 state.slider 에 값이 들어가고 장면이 멈춘다(state.paused).
-   - 장면은 멈춰 있을 때 state.slider 를 따르고, 움직이는 동안에는 지금 값을 state.slider 에 써서 막대가 따라오게 한다. */
+   - 장면은 멈춰 있을 때 state.slider 를 따르고, 움직이는 동안에는 지금 값을 state.slider 에 써서 막대가 따라오게 한다.
+   - slider.pause = false 면 막대를 움직여도 멈추지 않는다 (장면은 늘 state.slider 를 읽기만 한다).
+   content.speedLabel 이 없으면 속도 버튼을 그리지 않고, content.loading 으로 불러오는 중 문구를 바꾼다. */
 
 import * as THREE from "three";
 import { getRenderer, disposeScene } from "./three/stage.js";
@@ -48,19 +50,23 @@ function template(entry, content, progress) {
         <button class="body-info__close" type="button" aria-label="설명 닫기">×</button>
       </div>
       <p class="stage__hint">${content.hint}</p>
-      <div class="stage__loading" aria-hidden="true"><span class="spinner"></span>우주로 날아가는 중…</div>
+      <div class="stage__loading" aria-hidden="true"><span class="spinner"></span>${content.loading || "우주로 날아가는 중…"}</div>
       <p class="stage__fallback">이 기기에서는 3D 화면을 열 수 없어요. 아래 설명과 퀴즈로 탐험을 이어 가요!</p>
     </section>
 
     <div class="controls">
       <button class="btn btn--primary" type="button" data-act="pause" aria-pressed="false">⏸ 잠깐 멈추기</button>
-      <div class="speed" role="group" aria-label="${content.speedLabel}">
+      ${
+        content.speedLabel
+          ? `<div class="speed" role="group" aria-label="${content.speedLabel}">
         <span class="speed__label">${content.speedLabel}</span>
         ${SPEEDS.map(
           (s) =>
             `<button type="button" class="speed__btn" data-speed="${s.value}" aria-pressed="${s.value === 1}">${s.label}</button>`
         ).join("")}
-      </div>
+      </div>`
+          : ""
+      }
       <button class="btn btn--ghost" type="button" data-act="narrate">🔊 설명 듣기</button>
       ${
         content.slider
@@ -286,7 +292,7 @@ export function createSceneLesson({ content, createScene }) {
         "input",
         () => {
           state.slider = Number(sliderInput.value);
-          setPaused(true);
+          if (content.slider.pause !== false) setPaused(true);
           showSlider();
         },
         { signal }

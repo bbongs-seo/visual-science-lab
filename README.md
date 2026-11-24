@@ -9,6 +9,9 @@
 | 사계절이 생기는 이유 | 날짜 막대로 기울어진 지구를 공전 궤도 위에서 옮기며 서울의 한낮 해 높이·낮 길이·막대 그림자 비교하기 |
 | 일식과 월식이 생기는 이유 | 달을 옮겨 해·달·지구를 한 줄로 세우고, 지구에서 본 하늘과 붉게 물드는 달 보기 |
 | 밀물과 썰물이 생기는 이유 | 달을 손으로 끌어 옮기면 바닷물이 따라 부풀고, 인천 바닷가 물높이가 오르내리는 모습 보기 |
+| 하늘이 파랗고 노을이 붉은 이유 | 해 높이 막대로 햇빛이 공기를 지나는 길이를 바꾸며 흩어지는 빛 알갱이 색과 노을 보기 |
+| 무지개가 생기는 원리 | 빗방울로 들어가는 빛의 높이를 바꾸며 일곱 색으로 갈라지는 길과 42° 무지개 각도 찾기 |
+| 비행기가 나는 원리 | 비행 속도를 올리며 날개 위아래 공기 흐름의 빠르기와 양력·무게를 견주어 띄워 보기 |
 
 레슨마다 탐험 미션 3개와 확인 퀴즈 3문제가 있고, 해낸 만큼 별을 모읍니다.
 천체를 누르면 설명 카드가 뜨고, `설명 듣기`를 누르면 한국어 음성과 자막으로 원리를 읽어 줍니다.
@@ -49,11 +52,13 @@ src/
     scene-lesson.js      3D 레슨 공통 화면: 무대·컨트롤·음성·미션·퀴즈·정리
     three/               공유 렌더러, 지구·태양·달·별 만들기, 셰이더
     astro.js             시각·물높이·계절·일식 계산 (순수 함수, 테스트 대상)
+    optics.js            빛의 산란·물방울 속 굴절과 반사 계산 (순수 함수, 테스트 대상)
+    flow.js              주코프스키 날개 둘레 공기 흐름 (순수 함수, 테스트 대상)
     progress.js          별 기록 (이 기기 localStorage)
     narration.js, quiz.js, toast.js
   lessons/science/
     day-night/           content.js(글·미션·퀴즈) + scene.js(3D 장면)
-    seasons/ eclipse/ tides/
+    seasons/ eclipse/ tides/ sky/ rainbow/ lift/
   styles/                공통·홈·레슨 스타일
 tests/                   vitest 단위 테스트
 ```
@@ -65,7 +70,8 @@ tests/                   vitest 단위 테스트
    - `scene.js`: `createScene({ canvas, overlay, complete, signal })` 이 `{ scene, camera, controls, pickTargets, resize, update }` 를 돌려주도록 작성
    - `index.js`: `createSceneLesson({ content, createScene })`
 2. `src/catalog.js`의 `LESSONS`에 한 줄을 추가합니다. `stars`는 미션 수 + 퀴즈 수와 같아야 하고, `category`는 과목의 묶음(`space` 우주와 지구, `physics` 빛과 파동·일상 속 물리) 중 하나여야 합니다. 둘 다 테스트가 확인합니다.
-   - 값을 조절하는 막대가 필요하면 `content.js`에 `slider: { label, min, max, step, value, format }`을 넣습니다. 장면은 `state.paused`일 때 `state.slider`를 따르고, 움직이는 동안 지금 값을 `state.slider`에 씁니다.
+   - 값을 조절하는 막대가 필요하면 `content.js`에 `slider: { label, min, max, step, value, format }`을 넣습니다. 장면은 `state.paused`일 때 `state.slider`를 따르고, 움직이는 동안 지금 값을 `state.slider`에 씁니다. 막대를 움직여도 장면이 멈추면 안 되는 레슨은 `pause: false`를 주고 장면이 `state.slider`를 읽기만 합니다.
+   - `speedLabel`을 빈 문자열로 두면 속도 버튼이 사라지고, `loading`으로 불러오는 중 문구를 바꿀 수 있습니다.
 3. 수학처럼 3D가 아닌 레슨은 `mount(root, { entry })`가 `{ unmount() }`를 돌려주는 모듈이면 무엇이든 됩니다. 새 과목은 `SUBJECTS`에 추가하면 홈에 섹션이 생깁니다.
 
 미션 성공은 장면에서 `complete("미션-id")`를 부르면 됩니다. 천체 `userData.body.id`가 `sun`이면 그 천체를 눌렀을 때 `pick:sun` 미션이 자동으로 성공 처리됩니다.

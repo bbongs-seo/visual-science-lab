@@ -3,12 +3,35 @@
 import { LESSONS, SUBJECTS } from "../catalog.js";
 import { lessonStars, totalStars } from "../shared/progress.js";
 import { lessonHref } from "./router.js";
+import { createAirfoil } from "../shared/flow.js";
 
 // CSS 변수 안의 상대 url()은 CSS 파일 기준으로 풀리므로 문서 기준 절대 주소로 넘긴다
 const texture = (file) =>
   `url(${new URL(`${import.meta.env.BASE_URL}textures/${file}`, document.baseURI).href})`;
 
+/** 비행기 날개 단면: 레슨과 같은 계산으로 그린 날개와 그 위아래를 흐르는 바람 줄 */
+function wingCover() {
+  const path = createAirfoil()
+    .outline(80)
+    .map(([x, y], i) => `${i ? "L" : "M"}${(180 + x * 62).toFixed(1)} ${(100 - y * 62).toFixed(1)}`)
+    .join(" ");
+  const streaks = [44, 66, 132, 154]
+    .map((y, i) => `<line class="cover__wind" x1="-40" y1="${y}" x2="120" y2="${y}" style="animation-delay:${-i * 0.45}s"/>`)
+    .join("");
+  return `
+    <div class="cover cover--wing" aria-hidden="true">
+      <svg viewBox="0 0 360 190" preserveAspectRatio="xMidYMid slice">${streaks}<path d="${path} Z" fill="#dfe8f8"/></svg>
+    </div>`;
+}
+
 function renderCover(cover) {
+  if (cover.kind === "sky") {
+    return `<div class="cover cover--sky" aria-hidden="true"><span class="cover__sunset"></span></div>`;
+  }
+  if (cover.kind === "rainbow") {
+    return `<div class="cover cover--rainbow" aria-hidden="true"><span class="cover__rainbow"></span></div>`;
+  }
+  if (cover.kind === "wing") return wingCover();
   if (cover.kind !== "space") return `<div class="cover"></div>`;
   return `
     <div class="cover cover--space" aria-hidden="true">
