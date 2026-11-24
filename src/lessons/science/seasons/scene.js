@@ -3,6 +3,7 @@ import {
   applyResponsiveFraming,
   createLabel,
   createOrbitControls,
+  liftAbove,
   projectedRadius,
 } from "../../../shared/three/stage.js";
 import {
@@ -241,19 +242,11 @@ export function createScene({ canvas, overlay, complete }) {
       seoul.tip.getWorldPosition(tipWorld);
       seoulDir.copy(tipWorld).sub(earthPosition);
       toCamera.copy(camera.position).sub(tipWorld);
-      const seoulVisible = seoulDir.dot(toCamera) > 0;
-      labels.seoul.place(tipWorld, camera, width, height, seoulVisible);
+      labels.seoul.place(tipWorld, camera, width, height, seoulDir.dot(toCamera) > 0);
 
-      // 북극 이름표가 서울 이름표와 겹치면 서울 이름표 위로 올린다
       anchor.copy(earthPosition).addScaledVector(axis, EARTH_RADIUS * 1.75);
       labels.pole.place(anchor, camera, width, height);
-      const { seoul: s, pole: p } = labels;
-      const seoulY = s.y + s.el.offsetTop; // 서울 이름표는 CSS margin-top 으로 핀 위에 떠 있다
-      const gap = (p.el.offsetHeight + s.el.offsetHeight) / 2 + 4;
-      const overlapX = Math.abs(p.x - s.x) < (p.el.offsetWidth + s.el.offsetWidth) / 2;
-      if (seoulVisible && overlapX && p.y > seoulY - gap && p.y < seoulY + 4) {
-        labels.pole.place(anchor, camera, width, height, true, seoulY - gap - p.y);
-      }
+      liftAbove(labels.pole, labels.seoul);
     },
   };
 }

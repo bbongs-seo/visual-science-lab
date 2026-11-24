@@ -81,6 +81,20 @@ export function createLabel(parent, text, modifier = "") {
   };
 }
 
+/** label 이 other 이름표와 겹치면 other 바로 위로 올린다. 같은 프레임에 둘 다 place 한 뒤 부른다.
+   (CSS margin-top 으로 띄운 이름표가 있어 offsetTop 까지 더해 실제로 보이는 위치를 비교한다) */
+export function liftAbove(label, other) {
+  if (!other.el.classList.contains("is-visible")) return;
+  const a = label.el;
+  const b = other.el;
+  const gap = (a.offsetHeight + b.offsetHeight) / 2 + 4;
+  const otherY = other.y + b.offsetTop;
+  if (Math.abs(label.x - other.x) >= (a.offsetWidth + b.offsetWidth) / 2) return;
+  if (Math.abs(label.y + a.offsetTop - otherY) >= gap) return;
+  label.y = otherY - gap - a.offsetTop;
+  a.style.transform = `translate(${label.x.toFixed(1)}px, ${label.y.toFixed(1)}px) translate(-50%, -50%)`;
+}
+
 /** 반지름 radius 인 구가 position 에 있을 때 화면에서 보이는 반지름(px) */
 export function projectedRadius(position, radius, camera, height) {
   const distance = camera.position.distanceTo(position);

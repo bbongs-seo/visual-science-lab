@@ -4,6 +4,7 @@ import {
   createEdgePointer,
   createLabel,
   createOrbitControls,
+  liftAbove,
   projectedRadius,
 } from "../../../shared/three/stage.js";
 import {
@@ -172,6 +173,7 @@ export function createScene({ canvas, overlay, complete, signal, pick }) {
       toCamera.copy(camera.position).sub(tipWorld);
       const facing = seoulDir.dot(toCamera) > 0;
       labels.seoul.place(tipWorld, camera, width, height, facing);
+      liftAbove(labels.day, labels.seoul);
       // 태양 원반이 화면에 걸려 있으면(넓은 화면) 직접 누를 수 있으니 버튼을 숨긴다
       sunPointer.place(sunPosition, camera, width, height, projectedRadius(sunPosition, SCALE.sunRadius * 0.8, camera, height));
     },
