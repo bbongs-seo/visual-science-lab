@@ -23,6 +23,9 @@ const START_HOUR = 7; // 서울의 아침에서 출발해 낮 → 저녁 → 밤
 const TAU = Math.PI * 2;
 const DAY_OFFSET = new THREE.Vector3(0, 0.95, 0.4);
 const NIGHT_OFFSET = new THREE.Vector3(0, -0.75, 0.4);
+// 줌 아웃으로 지구가 화면에서 이만큼(반지름 px)보다 작아지면 이름표가 지구를 덮으므로 숨긴다
+const SEOUL_LABEL_MIN_PX = 45;
+const DAY_NIGHT_LABEL_MIN_PX = 22;
 
 export function createScene({ canvas, overlay, complete, signal, pick }) {
   const scene = new THREE.Scene();
@@ -166,13 +169,14 @@ export function createScene({ canvas, overlay, complete, signal, pick }) {
         .copy(earthPosition)
         .addScaledVector(sunDirection, -earthRadius * 1.05)
         .addScaledVector(NIGHT_OFFSET, earthRadius);
-      labels.day.place(dayAnchor, camera, width, height);
-      labels.night.place(nightAnchor, camera, width, height);
+      const earthPx = projectedRadius(earthPosition, earthRadius, camera, height);
+      labels.day.place(dayAnchor, camera, width, height, earthPx >= DAY_NIGHT_LABEL_MIN_PX);
+      labels.night.place(nightAnchor, camera, width, height, earthPx >= DAY_NIGHT_LABEL_MIN_PX);
 
       seoul.tip.getWorldPosition(tipWorld);
       toCamera.copy(camera.position).sub(tipWorld);
       const facing = seoulDir.dot(toCamera) > 0;
-      labels.seoul.place(tipWorld, camera, width, height, facing);
+      labels.seoul.place(tipWorld, camera, width, height, facing && earthPx >= SEOUL_LABEL_MIN_PX);
       liftAbove(labels.day, labels.seoul);
       // 태양 원반이 화면에 걸려 있으면(넓은 화면) 직접 누를 수 있으니 버튼을 숨긴다
       sunPointer.place(sunPosition, camera, width, height, projectedRadius(sunPosition, SCALE.sunRadius * 0.8, camera, height));

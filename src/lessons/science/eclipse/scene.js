@@ -4,6 +4,7 @@ import {
   applyResponsiveFraming,
   createLabel,
   createOrbitControls,
+  isZoomedOut,
 } from "../../../shared/three/stage.js";
 import {
   SPHERE_SHADOW_GLSL,
@@ -223,6 +224,7 @@ export function createScene({ canvas, overlay, complete }) {
   const moonDir = new THREE.Vector3();
   const anchor = new THREE.Vector3();
   const follow = new THREE.Vector3();
+  const followBase = new THREE.Vector3(); // 따라가는 기준점. 두 손가락으로 옮긴 만큼(target - followBase)은 그대로 둔다
   let narrow = false;
   let phase = START_PHASE;
 
@@ -236,6 +238,7 @@ export function createScene({ canvas, overlay, complete }) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       applyResponsiveFraming(camera, controls, width, height, framing);
+      followBase.copy(controls.target);
       narrow = width / height < 0.85;
     },
 
@@ -260,9 +263,10 @@ export function createScene({ canvas, overlay, complete }) {
 
       // 좁은 화면: 궤도 전체 대신 지구와 달 사이를 따라가며 크게 보여 준다. 카메라도 같이 옮겨 돌려 본 각도는 지킨다
       if (narrow) {
-        follow.copy(earthPosition).lerp(moon.position, 0.5).sub(controls.target);
+        follow.copy(earthPosition).lerp(moon.position, 0.5).sub(followBase);
         follow.y = 0;
         follow.multiplyScalar(dt === 0 ? 1 : Math.min(1, dt * 4));
+        followBase.add(follow);
         controls.target.add(follow);
         camera.position.add(follow);
       }
@@ -320,9 +324,10 @@ export function createScene({ canvas, overlay, complete }) {
       anchor.copy(earthPosition).addScaledVector(light, EARTH_RADIUS * 0.9);
       anchor.y += EARTH_RADIUS * 1.15; // 그림자를 가리지 않게 위쪽에
       anchor.z = moon.position.z * 0.6;
-      labels.moonShadow.place(anchor, camera, width, height, eclipse.type === "solar" && eclipse.kind !== null);
+      const showLabels = !isZoomedOut(controls);
+      labels.moonShadow.place(anchor, camera, width, height, showLabels && eclipse.type === "solar" && eclipse.kind !== null);
       anchor.copy(moon.position).y += MOON_RADIUS * 2.4;
-      labels.earthShadow.place(anchor, camera, width, height, eclipse.type === "lunar" && eclipse.kind !== null);
+      labels.earthShadow.place(anchor, camera, width, height, showLabels && eclipse.type === "lunar" && eclipse.kind !== null);
     },
   };
 }

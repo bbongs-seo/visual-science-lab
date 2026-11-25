@@ -22,7 +22,9 @@ export function getRenderer() {
 
 export function createOrbitControls(camera, canvas, { minDistance, maxDistance }) {
   const controls = new OrbitControls(camera, canvas);
-  controls.enablePan = false;
+  // 한 손가락: 돌리기, 두 손가락: 벌리고 오므려 확대 + 끌어서 화면 옮기기 (마우스는 오른쪽 버튼으로 옮기기)
+  controls.enablePan = true;
+  controls.maxTargetRadius = maxDistance / 2; // 옮기다 장면을 잃어버리지 않게 중심(원점)에서 이만큼까지만
   controls.enableDamping = true;
   controls.dampingFactor = 0.075;
   controls.rotateSpeed = 0.55;
@@ -45,7 +47,13 @@ export function applyResponsiveFraming(camera, controls, width, height, options)
 
   controls.target.set(targetX, THREE.MathUtils.lerp(narrowTargetY, targetY, wide), 0);
   camera.position.copy(controls.target).addScaledVector(options.direction, distance);
+  controls.framedDistance = distance;
   controls.update();
+}
+
+/** 처음 화면보다 factor 배 넘게 물러났는지(줌 아웃). 작아진 물체를 덮는 이름표를 숨길 때 쓴다 */
+export function isZoomedOut(controls, factor = 1.2) {
+  return controls.getDistance() > controls.framedDistance * factor;
 }
 
 /** 작은 천체(달)를 손가락으로 누르기 쉽게 보이지 않는 큰 구를 붙인다. Raycaster 는 visible=false 도 맞힌다 */

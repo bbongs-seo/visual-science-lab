@@ -5,6 +5,7 @@ import {
   createLabel,
   createOrbitControls,
   isBehindSphere,
+  isZoomedOut,
 } from "../../../shared/three/stage.js";
 import {
   createEarth,
@@ -330,10 +331,11 @@ export function createScene({ canvas, overlay, complete, signal }) {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
       side.crossVectors(up, moonDir).normalize();
+      const showLabels = !isZoomedOut(controls);
       const place = (label, dir, distance) => {
         anchor.copy(earthPosition).addScaledVector(dir, distance);
         anchor.y += earthRadius * 0.12;
-        label.place(anchor, camera, width, height, !isBehindSphere(anchor, camera, earthSphere));
+        label.place(anchor, camera, width, height, showLabels && !isBehindSphere(anchor, camera, earthSphere));
       };
       place(labels.highA, moonDir, earthRadius * 1.6);
       place(labels.highB, moonDir.clone().negate(), earthRadius * 1.6);
@@ -346,7 +348,7 @@ export function createScene({ canvas, overlay, complete, signal }) {
         camera,
         width,
         height,
-        local.dot(toCamera) > 0
+        showLabels && local.dot(toCamera) > 0
       );
     },
   };

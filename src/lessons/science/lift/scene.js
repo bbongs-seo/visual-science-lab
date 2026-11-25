@@ -4,6 +4,7 @@ import {
   applyResponsiveFraming,
   createLabel,
   createOrbitControls,
+  isZoomedOut,
 } from "../../../shared/three/stage.js";
 import { createStars } from "../../../shared/three/space.js";
 import { createAirfoil } from "../../../shared/flow.js";
@@ -257,12 +258,13 @@ export function createScene({ canvas, overlay, complete }) {
 
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
-      labels.low.place(low.anchor.getWorldPosition(anchor), camera, width, height);
-      labels.high.place(high.anchor.getWorldPosition(anchor), camera, width, height);
+      const showLabels = !isZoomedOut(controls);
+      labels.low.place(low.anchor.getWorldPosition(anchor), camera, width, height, showLabels);
+      labels.high.place(high.anchor.getWorldPosition(anchor), camera, width, height, showLabels);
       anchor.set(-1, 0.75 + 2 * Math.min(ratio, 2), 0).add(rig.position);
-      labels.lift.place(anchor, camera, width, height, ratio > 0.02);
+      labels.lift.place(anchor, camera, width, height, showLabels && ratio > 0.02);
       anchor.set(-1, -2.45, 0).add(rig.position);
-      labels.weight.place(anchor, camera, width, height);
+      labels.weight.place(anchor, camera, width, height, showLabels);
     },
   };
 }

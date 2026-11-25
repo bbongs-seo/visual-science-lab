@@ -3,6 +3,7 @@ import {
   applyResponsiveFraming,
   createLabel,
   createOrbitControls,
+  isZoomedOut,
   liftAbove,
   projectedRadius,
 } from "../../../shared/three/stage.js";
@@ -242,10 +243,11 @@ export function createScene({ canvas, overlay, complete }) {
       seoul.tip.getWorldPosition(tipWorld);
       seoulDir.copy(tipWorld).sub(earthPosition);
       toCamera.copy(camera.position).sub(tipWorld);
-      labels.seoul.place(tipWorld, camera, width, height, seoulDir.dot(toCamera) > 0);
+      const showLabels = !isZoomedOut(controls);
+      labels.seoul.place(tipWorld, camera, width, height, showLabels && seoulDir.dot(toCamera) > 0);
 
       anchor.copy(earthPosition).addScaledVector(axis, EARTH_RADIUS * 1.75);
-      labels.pole.place(anchor, camera, width, height);
+      labels.pole.place(anchor, camera, width, height, showLabels);
       liftAbove(labels.pole, labels.seoul);
     },
   };

@@ -43,6 +43,7 @@ function template(entry, content, progress) {
     <section class="stage" aria-label="${content.stageLabel}">
       <div class="stage__overlay"></div>
       <p class="stage__badge">${content.badge}</p>
+      <button class="stage__reset" type="button" data-act="reset-view" hidden>🎯 처음 화면</button>
       <p class="caption" aria-live="polite" hidden></p>
       <div class="body-info" hidden>
         <h2 class="body-info__title"></h2>
@@ -274,6 +275,22 @@ export function createSceneLesson({ content, createScene }) {
           raf = window.requestAnimationFrame(frame);
         };
         raf = window.requestAnimationFrame(frame);
+
+        // 처음 화면으로: 손을 뗀 뒤 남은 관성(damping)까지 비운 다음 레슨이 처음 잡는 화면을 다시 잡는다
+        const resetButton = $('[data-act="reset-view"]');
+        resetButton.hidden = false;
+        resetButton.addEventListener(
+          "click",
+          () => {
+            const { controls } = view;
+            const damping = controls.enableDamping;
+            controls.enableDamping = false;
+            controls.update();
+            controls.enableDamping = damping;
+            view.resize(stage.clientWidth, stage.clientHeight);
+          },
+          { signal }
+        );
 
         texturesReady().then(() => {
           if (!signal.aborted) stage.classList.add("is-ready");
